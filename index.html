@@ -1,27 +1,127 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Cleaner & Parser</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #333;
+        }
+        .card {
+            background: #f9f9f9;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover { background-color: #0056b3; }
+        .btn-secondary {
+            background-color: #28a745;
+            display: none; /* Hidden until there is text to copy */
+        }
+        .btn-secondary:hover { background-color: #218838; }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            min-height: 50px;
+        }
+        .file-input-wrapper {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
 <body>
-    <h2>Log Cleaner</h2>
-    <textarea id="rawInput" rows="10" cols="50" placeholder="Paste your log here..."></textarea>
-    <br>
-    <button onclick="parseLog()">Clean Log</button>
-    <h3>Result:</h3>
-    <pre id="output"></pre>
+
+    <h2>Security Log Parser</h2>
+    <div class="card">
+        <div class="file-input-wrapper">
+            <label style="display:block; margin-bottom:8px; font-weight:bold;">Upload SecurityCheck.txt:</label>
+            <input type="file" id="fileInput" accept=".txt">
+        </div>
+        
+        <h3>Cleaned Results:</h3>
+        <pre id="output">No file uploaded yet.</pre>
+        
+        <button id="copyBtn" class="btn btn-secondary" onclick="copyToClipboard()">Copy Results</button>
+    </div>
 
     <script>
-        function parseLog() {
-            let input = document.getElementById('rawInput').value;
-            // This regex finds the pattern and extracts the name and URL
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            let file = e.target.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let contents = e.target.result;
+                parseLog(contents);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseLog(input) {
+            // Updated regex to catch the software name and the download URL
             let regex = /\[color=red\](.*?)\[\/color\].*?\[url=(.*?)\]/g;
-            let output = "";
+            let outputText = "";
             let match;
+            let count = 1;
             
             while ((match = regex.exec(input)) !== null) {
-                output += `${match[1].trim()} | ${match[2].trim()}\n`;
+                let name = match[1].replace(/\[b\]|\[\/b\]/g, '').trim(); // Cleans out stray bold tags
+                let url = match[2].trim();
+                outputText += `${count}. ${name}\n   Link: ${url}\n\n`;
+                count++;
             }
             
-            document.getElementById('output').textContent = output || "No matches found.";
+            const outputEl = document.getElementById('output');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            if (outputText) {
+                outputEl.textContent = outputText;
+                copyBtn.style.display = "inline-block"; // Show copy button
+            } else {
+                outputEl.textContent = "No outdated items found in this log file.";
+                copyBtn.style.display = "none";
+            }
+        }
+
+        function copyToClipboard() {
+            let textToCopy = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                let btn = document.getElementById('copyBtn');
+                let originalText = btn.textContent;
+                btn.textContent = "Copied!";
+                btn.style.backgroundColor = "#6c757d";
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = "#28a745";
+                }, 2000);
+            }).catch(err => {
+                alert("Failed to copy text: ", err);
+            });
         }
     </script>
+
 </body>
 </html>
