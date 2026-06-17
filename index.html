@@ -1,127 +1,460 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log Cleaner & Parser</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 0 20px;
-            color: #333;
-        }
-        .card {
-            background: #f9f9f9;
-            border: 1px solid #e1e1e1;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            font-size: 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .btn:hover { background-color: #0056b3; }
-        .btn-secondary {
-            background-color: #28a745;
-            display: none; /* Hidden until there is text to copy */
-        }
-        .btn-secondary:hover { background-color: #218838; }
-        pre {
-            background: #272822;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 4px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: monospace;
-            min-height: 50px;
-        }
-        .file-input-wrapper {
-            margin-bottom: 15px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecurityCh - SecurityCheck Parser</title>
+<style>
+:root{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a2e;--accent:#e74c3c;--accent-g:rgba(231,76,60,0.3);--t1:#e8e8f0;--t2:#8888a0;--t3:#555570;--bdr:#2a2a40;--grn:#2ecc71;--yel:#f39c12;--blu:#3498db;--cyn:#1abc9c}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0}
+header{position:relative;z-index:1;text-align:center;padding:40px 20px 20px;border-bottom:1px solid var(--bdr);background:linear-gradient(180deg,rgba(231,76,60,0.05) 0%,transparent 100%)}
+header h1{font-size:2.5em;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,#e74c3c,#c0392b,#e74c3c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{color:var(--t2);margin-top:6px;font-size:0.95em}
+.container{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:30px 20px}
+.drop-zone{border:2px dashed var(--bdr);border-radius:16px;padding:60px 30px;text-align:center;cursor:pointer;transition:all 0.3s;background:var(--bg2);position:relative;overflow:hidden}
+.drop-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,var(--accent-g),transparent 70%);opacity:0;transition:opacity 0.3s}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--bg3)}
+.drop-zone:hover::before,.drop-zone.drag-over::before{opacity:1}
+.drop-zone-icon{font-size:3.5em;margin-bottom:12px;position:relative;z-index:1}
+.drop-zone h3{font-size:1.2em;margin-bottom:6px;position:relative;z-index:1}
+.drop-zone p{color:var(--t2);font-size:0.85em;position:relative;z-index:1}
+.drop-zone input{display:none}
+.toolbar{display:none;margin-top:20px;gap:10px;flex-wrap:wrap;justify-content:center}
+.toolbar.active{display:flex}
+.btn{padding:10px 20px;border:1px solid var(--bdr);border-radius:8px;cursor:pointer;font-size:0.88em;font-weight:600;transition:all 0.2s;background:var(--bg3);color:var(--t1)}
+.btn:hover{border-color:var(--accent);background:rgba(231,76,60,0.1)}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-accent:hover{background:#c0392b}
+.results{display:none;margin-top:30px}
+.results.active{display:block}
+.results-header{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.results-header h2{font-size:1.1em;font-weight:600;color:var(--t1);line-height:1.5}
+.results-count{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
+.count-badge{padding:5px 14px;border-radius:6px;font-size:0.82em;font-weight:600}
+.count-outdated{background:rgba(231,76,60,0.15);color:var(--accent);border:1px solid rgba(231,76,60,0.25)}
+.count-clean{background:rgba(46,204,113,0.12);color:var(--grn);border:1px solid rgba(46,204,113,0.2)}
+.count-info{background:rgba(52,152,219,0.12);color:var(--blu);border:1px solid rgba(52,152,219,0.2)}
+.section{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;margin-bottom:16px;overflow:hidden;animation:fsIn 0.4s}
+@keyframes fsIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.section-header{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;transition:background 0.2s}
+.section-header:hover{background:rgba(255,255,255,0.02)}
+.section-header h3{font-size:0.9em;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--t2)}
+.section-header .toggle{color:var(--t3);transition:transform 0.3s;font-size:0.8em}
+.section-header.open .toggle{transform:rotate(180deg)}
+.section-body{padding:0 20px 18px;display:none}
+.section-body.open{display:block}
+.item-list{list-style:none}
+.item{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:flex-start;gap:12px;font-size:0.88em;line-height:1.5}
+.item:last-child{border-bottom:none}
+.item-num{color:var(--t3);min-width:28px;text-align:right;font-weight:700;font-size:0.85em;padding-top:1px}
+.item-content{flex:1}
+.item-name{color:var(--t1)}
+.item-sep{color:var(--t3);margin:0 4px}
+.item-link{color:var(--accent);text-decoration:none;font-weight:600;transition:color 0.2s}
+.item-link:hover{color:#ff6b6b;text-decoration:underline}
+.item-note{margin-top:4px;font-size:0.82em;color:var(--blu);font-style:italic}
+.clean-item{color:var(--t2);padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.85em}
+.clean-item:last-child{border-bottom:none}
+.info-note{margin-top:6px;padding:8px 14px;font-size:0.82em;color:var(--blu);background:rgba(52,152,219,0.06);border-radius:6px;border-left:3px solid var(--blu)}
+.unwanted-item{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.85em;line-height:1.5}
+.unwanted-item:last-child{border-bottom:none}
+.unwanted-label{color:var(--yel);font-weight:600}
+.unwanted-desc{color:var(--t2)}
+.unwanted-link{color:var(--accent);text-decoration:none}
+.unwanted-link:hover{text-decoration:underline}
+.raw-output{display:none;margin-top:20px}
+.raw-output.active{display:block}
+.raw-output pre{background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:18px;font-family:'Cascadia Code','Fira Code',monospace;font-size:0.8em;line-height:1.7;overflow-x:auto;white-space:pre-wrap;word-wrap:break-word;color:var(--t2);max-height:500px;overflow-y:auto}
+footer{text-align:center;padding:30px 20px;color:var(--t3);font-size:0.78em;border-top:1px solid var(--bdr);margin-top:40px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+@media(max-width:600px){header h1{font-size:1.8em}.drop-zone{padding:40px 20px}.item{flex-direction:column;gap:4px}.item-num{min-width:auto;text-align:left}}
+</style>
 </head>
 <body>
+<div class="bg-grid"></div>
+<header>
+  <h1>SecurityCh</h1>
+  <p>Parse SecurityCheck output &mdash; auto-formats outdated software with download links</p>
+</header>
+<div class="container">
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-zone-icon">&#128196;</div>
+    <h3>Drop SecurityCheck.txt here or click to browse</h3>
+    <p>Upload the raw .txt output from SecurityCheck to parse it</p>
+    <input type="file" id="fileInput" accept=".txt">
+  </div>
+  <div class="toolbar" id="toolbar">
+    <button class="btn" onclick="copyFormatted()">&#128203; Copy Formatted Output</button>
+    <button class="btn" onclick="copyRawText()">&#128196; Copy Raw Text</button>
+    <button class="btn" onclick="toggleRawView()">&#128065; Toggle Raw View</button>
+    <button class="btn btn-accent" onclick="resetAll()">&#128260; Parse Another</button>
+  </div>
+  <div class="results" id="results"></div>
+  <div class="raw-output" id="rawOutput"><pre id="rawPre"></pre></div>
+</div>
+<footer>SecurityCh &mdash; All parsing runs locally in your browser. No data is sent anywhere.</footer>
 
-    <h2>Security Log Parser</h2>
-    <div class="card">
-        <div class="file-input-wrapper">
-            <label style="display:block; margin-bottom:8px; font-weight:bold;">Upload SecurityCheck.txt:</label>
-            <input type="file" id="fileInput" accept=".txt">
-        </div>
-        
-        <h3>Cleaned Results:</h3>
-        <pre id="output">No file uploaded yet.</pre>
-        
-        <button id="copyBtn" class="btn btn-secondary" onclick="copyToClipboard()">Copy Results</button>
-    </div>
+<script>
+(function(){
+"use strict";
 
-    <script>
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            let file = e.target.files[0];
-            if (!file) return;
+var dropZone=document.getElementById('dropZone');
+var fileInput=document.getElementById('fileInput');
+var resultsDiv=document.getElementById('results');
+var toolbar=document.getElementById('toolbar');
+var rawOutput=document.getElementById('rawOutput');
+var rawPre=document.getElementById('rawPre');
 
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                let contents = e.target.result;
-                parseLog(contents);
-            };
-            reader.readAsText(file);
-        });
+var parsedData={outdated:[],clean:[],info:[],unwanted:[],sections:[],header:''};
 
-        function parseLog(input) {
-            // Updated regex to catch the software name and the download URL
-            let regex = /\[color=red\](.*?)\[\/color\].*?\[url=(.*?)\]/g;
-            let outputText = "";
-            let match;
-            let count = 1;
-            
-            while ((match = regex.exec(input)) !== null) {
-                let name = match[1].replace(/\[b\]|\[\/b\]/g, '').trim(); // Cleans out stray bold tags
-                let url = match[2].trim();
-                outputText += `${count}. ${name}\n   Link: ${url}\n\n`;
-                count++;
-            }
-            
-            const outputEl = document.getElementById('output');
-            const copyBtn = document.getElementById('copyBtn');
-            
-            if (outputText) {
-                outputEl.textContent = outputText;
-                copyBtn.style.display = "inline-block"; // Show copy button
-            } else {
-                outputEl.textContent = "No outdated items found in this log file.";
-                copyBtn.style.display = "none";
-            }
+dropZone.addEventListener('click',function(){fileInput.click();});
+dropZone.addEventListener('dragover',function(e){e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',function(){dropZone.classList.remove('drag-over');});
+dropZone.addEventListener('drop',function(e){
+  e.preventDefault();dropZone.classList.remove('drag-over');
+  var files=e.dataTransfer.files;
+  if(files.length>0&&files[0].name.toLowerCase().endsWith('.txt'))handleFile(files[0]);
+});
+fileInput.addEventListener('change',function(e){
+  if(e.target.files.length>0)handleFile(e.target.files[0]);
+});
+
+function stripBBCode(s){
+  s=s.replace(/\[color=[^\]]*\]/gi,'');
+  s=s.replace(/\[\/color\]/gi,'');
+  s=s.replace(/\[b\]/gi,'');
+  s=s.replace(/\[\/b\]/gi,'');
+  s=s.replace(/\[i\]/gi,'');
+  s=s.replace(/\[\/i\]/gi,'');
+  s=s.replace(/\[u\]/gi,'');
+  s=s.replace(/\[\/u\]/gi,'');
+  s=s.replace(/\[url=[^\]]*\]/gi,'');
+  s=s.replace(/\[\/url\]/gi,'');
+  s=s.replace(/\[img\]/gi,'');
+  s=s.replace(/\[\/img\]/gi,'');
+  s=s.replace(/\[list\]/gi,'');
+  s=s.replace(/\[\/list\]/gi,'');
+  s=s.replace(/\[\*\]/gi,'');
+  s=s.replace(/\[font=[^\]]*\]/gi,'');
+  s=s.replace(/\[\/font\]/gi,'');
+  s=s.replace(/\[size=[^\]]*\]/gi,'');
+  s=s.replace(/\[\/size\]/gi,'');
+  return s;
+}
+
+function extractURLs(text){
+  var urls=[];
+  var re=/\[url=([^\]]+)\]/gi;
+  var m;
+  while((m=re.exec(text))!==null){urls.push(m[1]);}
+  return urls;
+}
+
+function extractFirstURL(text){
+  var urls=extractURLs(text);
+  return urls.length>0?urls[0]:'';
+}
+
+function isSectionHeader(line){
+  return /^-+\s*\[.*\]\s*-+$/.test(line.trim());
+}
+
+function getSectionName(line){
+  var m=line.match(/-+\s*\[(.*?)\]\s*-+/);
+  return m?m[1].trim():'';
+}
+
+function handleFile(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var contents=e.target.result;
+    parseLog(contents);
+  };
+  reader.readAsText(file);
+}
+
+function parseLog(input){
+  var lines=input.split('\n');
+  parsedData={outdated:[],clean:[],info:[],unwanted:[],sections:[],header:''};
+
+  var headerLines=[];
+  var firstSectionFound=false;
+  var currentSection='General';
+  var currentSectionLines=[];
+
+  for(var i=0;i<lines.length;i++){
+    var rawLine=lines[i];
+    var trimmed=rawLine.trim();
+
+    if(!trimmed)continue;
+
+    if(isSectionHeader(trimmed)){
+      if(!firstSectionFound){
+        firstSectionFound=true;
+        parsedData.header=headerLines.join('\n');
+      }
+      if(currentSectionLines.length>0){
+        parsedData.sections.push({name:currentSection,lines:currentSectionLines.slice()});
+      }
+      currentSection=getSectionName(trimmed);
+      currentSectionLines=[];
+      continue;
+    }
+
+    if(!firstSectionFound){
+      headerLines.push(trimmed);
+      continue;
+    }
+
+    currentSectionLines.push({raw:trimmed,index:i});
+  }
+  if(currentSectionLines.length>0){
+    parsedData.sections.push({name:currentSection,lines:currentSectionLines.slice()});
+  }
+
+  var globalIndex=1;
+
+  for(var si=0;si<parsedData.sections.length;si++){
+    var sec=parsedData.sections[si];
+    var sectionOutdated=[];
+    var sectionClean=[];
+    var sectionInfo=[];
+    var sectionUnwanted=[];
+    var pendingInfo=null;
+
+    for(var li=0;li<sec.lines.length;li++){
+      var lineData=sec.lines[li];
+      var line=lineData.raw;
+
+      var isBlueInfo=/\[color=blue\]/i.test(line);
+      if(isBlueInfo){
+        var infoText=stripBBCode(line).trim();
+        if(infoText){
+          if(sectionOutdated.length>0){
+            sectionOutdated[sectionOutdated.length-1].note=infoText;
+          }else{
+            sectionInfo.push(infoText);
+          }
         }
+        continue;
+      }
 
-        function copyToClipboard() {
-            let textToCopy = document.getElementById('output').textContent;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                let btn = document.getElementById('copyBtn');
-                let originalText = btn.textContent;
-                btn.textContent = "Copied!";
-                btn.style.backgroundColor = "#6c757d";
-                
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.backgroundColor = "#28a745";
-                }, 2000);
-            }).catch(err => {
-                alert("Failed to copy text: ", err);
-            });
+      var hasWarning=/\[color=red\]/i.test(line)||(/\[b\]Warning!\[\/b\]/i.test(line)&&/\[url=/i.test(line));
+      var hasRedColor=/\[color=red\]/i.test(line);
+      var hasDownloadURL=/\[url=[^\]]+\]Download Update\[\/url\]/i.test(line);
+
+      if(hasRedColor&&hasDownloadURL){
+        var beforeRed='';
+        var redMatch=line.match(/\[color=red\]/i);
+        if(redMatch){
+          beforeRed=line.substring(0,redMatch.index).trim();
         }
-    </script>
+        var cleanName=stripBBCode(beforeRed).trim();
+        var url=extractFirstURL(line);
 
+        if(cleanName&&url){
+          sectionOutdated.push({name:cleanName,url:url,note:null,index:globalIndex});
+          globalIndex++;
+        }
+        continue;
+      }
+
+      if(hasRedColor&&!hasDownloadURL){
+        var beforeRed2='';
+        var redMatch2=line.match(/\[color=red\]/i);
+        if(redMatch2){
+          beforeRed2=line.substring(0,redMatch2.index).trim();
+        }
+        var cleanName2=stripBBCode(beforeRed2).trim();
+        if(cleanName2){
+          sectionOutdated.push({name:cleanName2,url:null,note:null,index:globalIndex});
+          globalIndex++;
+        }
+        continue;
+      }
+
+      var isUnwantedWarning=/\[b\]Warning!\[\/b\]/i.test(line)&&!hasRedColor;
+      if(isUnwantedWarning){
+        var cleanLine=stripBBCode(line).trim();
+        sectionUnwanted.push(cleanLine);
+        continue;
+      }
+
+      var cleanLine2=stripBBCode(line).trim();
+      if(!cleanLine2)continue;
+
+      if(/^-+\s*$/.test(cleanLine2))continue;
+      if(/^=+\s*$/.test(cleanLine2))continue;
+
+      sectionClean.push(cleanLine2);
+    }
+
+    if(sectionOutdated.length>0||sectionClean.length>0||sectionUnwanted.length>0){
+      parsedData.outdated=parsedData.outdated.concat(sectionOutdated);
+      parsedData.clean=parsedData.clean.concat(sectionClean);
+      parsedData.unwanted=parsedData.unwanted.concat(sectionUnwanted);
+    }
+  }
+
+  renderResults();
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderResults(){
+  dropZone.style.display='none';
+  toolbar.classList.add('active');
+  resultsDiv.classList.add('active');
+
+  var h='';
+
+  h+='<div class="results-header">';
+  h+='<h2>Please Uninstall, Update, or otherwise address the following as appropriate for your computer</h2>';
+  h+='<div class="results-count">';
+  h+='<span class="count-badge count-outdated">'+parsedData.outdated.length+' outdated</span>';
+  h+='<span class="count-badge count-clean">'+parsedData.clean.length+' other items</span>';
+  if(parsedData.unwanted.length>0){
+    h+='<span class="count-badge count-info">'+parsedData.unwanted.length+' unwanted</span>';
+  }
+  h+='</div></div>';
+
+  if(parsedData.outdated.length>0){
+    h+='<div class="section">';
+    h+='<div class="section-header open" onclick="toggleSection(this)"><h3>&#128260; Outdated Software - Download Updates</h3><span class="toggle">&#9660;</span></div>';
+    h+='<div class="section-body open"><ul class="item-list">';
+    for(var i=0;i<parsedData.outdated.length;i++){
+      var item=parsedData.outdated[i];
+      h+='<li class="item"><span class="item-num">'+item.index+'.</span><div class="content">';
+      h+='<span class="item-name">'+esc(item.name)+'</span>';
+      if(item.url){
+        h+='<span class="item-sep"> | </span>';
+        h+='<a class="item-link" href="'+esc(item.url)+'" target="_blank" rel="noopener">Download Update</a>';
+      }
+      if(item.note){
+        h+='<div class="item-note">'+esc(item.note)+'</div>';
+      }
+      h+='</div></li>';
+    }
+    h+='</ul></div></div>';
+  }
+
+  if(parsedData.unwanted.length>0){
+    h+='<div class="section">';
+    h+='<div class="section-header" onclick="toggleSection(this)"><h3>&#9888; Unwanted Software</h3><span class="toggle">&#9660;</span></div>';
+    h+='<div class="section-body">';
+    for(var i=0;i<parsedData.unwanted.length;i++){
+      h+='<div class="unwanted-item">'+esc(parsedData.unwanted[i])+'</div>';
+    }
+    h+='</div></div>';
+  }
+
+  if(parsedData.clean.length>0){
+    h+='<div class="section">';
+    h+='<div class="section-header" onclick="toggleSection(this)"><h3>&#10003; Other Installed Software</h3><span class="toggle">&#9660;</span></div>';
+    h+='<div class="section-body">';
+    for(var i=0;i<parsedData.clean.length;i++){
+      h+='<div class="clean-item">'+esc(parsedData.clean[i])+'</div>';
+    }
+    h+='</div></div>';
+  }
+
+  resultsDiv.innerHTML=h;
+
+  rawPre.textContent=buildFormattedText();
+}
+
+function buildFormattedText(){
+  var lines=[];
+  lines.push('Please Uninstall, Update, or otherwise address the following as appropriate for your computer');
+  lines.push('');
+  for(var i=0;i<parsedData.outdated.length;i++){
+    var item=parsedData.outdated[i];
+    var line=item.index+'. '+item.name;
+    if(item.url){
+      line+=' | Download Update '+item.url;
+    }
+    lines.push(line);
+  }
+  return lines.join('\n');
+}
+
+function buildRawText(){
+  var lines=[];
+  if(parsedData.header){lines.push(parsedData.header);lines.push('');}
+  for(var si=0;si<parsedData.sections.length;si++){
+    var sec=parsedData.sections[si];
+    lines.push('------------------------------- [ '+sec.name+' ] -------------------------------');
+    for(var li=0;li<sec.lines.length;li++){
+      lines.push(sec.lines[li].raw);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+window.toggleSection=function(h){
+  var b=h.nextElementSibling;
+  h.classList.toggle('open');
+  b.classList.toggle('open');
+};
+
+window.copyFormatted=function(){
+  var text=buildFormattedText();
+  navigator.clipboard.writeText(text).then(function(){
+    showCopyFeedback('Formatted output copied!');
+  }).catch(function(){
+    fallbackCopy(text);
+  });
+};
+
+window.copyRawText=function(){
+  var text=buildRawText();
+  navigator.clipboard.writeText(text).then(function(){
+    showCopyFeedback('Raw text copied!');
+  }).catch(function(){
+    fallbackCopy(text);
+  });
+};
+
+window.toggleRawView=function(){
+  rawOutput.classList.toggle('active');
+};
+
+window.resetAll=function(){
+  dropZone.style.display='';
+  toolbar.classList.remove('active');
+  resultsDiv.classList.remove('active');
+  resultsDiv.innerHTML='';
+  rawOutput.classList.remove('active');
+  rawPre.textContent='';
+  fileInput.value='';
+};
+
+function showCopyFeedback(msg){
+  var existing=document.querySelector('.copy-toast');
+  if(existing)existing.remove();
+  var toast=document.createElement('div');
+  toast.className='copy-toast';
+  toast.textContent=msg;
+  toast.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--grn);color:#fff;padding:10px 24px;border-radius:8px;font-size:0.88em;font-weight:600;z-index:999;animation:fsIn 0.3s;box-shadow:0 4px 20px rgba(0,0,0,0.4)';
+  document.body.appendChild(toast);
+  setTimeout(function(){toast.remove();},2000);
+}
+
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;
+  ta.style.cssText='position:fixed;left:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try{document.execCommand('copy');showCopyFeedback('Copied!');}
+  catch(e){showCopyFeedback('Copy failed - use Raw View');}
+  ta.remove();
+}
+
+})();
+</script>
 </body>
 </html>
