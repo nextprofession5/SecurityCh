@@ -373,7 +373,7 @@ function buildFormattedText(){
     var item=parsedData.outdated[i];
     var line=item.index+'. '+item.name;
     if(item.url){
-      line+=' | Download Update '+item.url;
+      line+=' | [Download Update]('+item.url+')';
     }
     lines.push(line);
   }
